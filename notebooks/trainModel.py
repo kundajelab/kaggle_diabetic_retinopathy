@@ -262,11 +262,9 @@ for patient_id in train_ids:
     train_image_paths.append(image_dir+str(patient_id)+".jpeg")
     train_image_labels.append(image_to_label[str(patient_id)])
     
-batch_size=64
+batch_size = 32
 maxepoches = 250
-learning_rate = 0.1
-lr_decay = 1e-6
-lr_drop = 20
+learning_rate = 3e-4
 
 batch_generator = get_image_batch_generator(image_paths=train_image_paths,
                                             labels=train_image_labels,
@@ -329,7 +327,7 @@ model = Sequential([
 ])
 
 print("compiling model...")
-sgd = optimizers.SGD(lr=learning_rate, decay=lr_decay, momentum=0.9, nesterov=True)
+sgd = optimizers.Adam(lr=learning_rate)
 model.compile(loss='categorical_crossentropy', optimizer=sgd,metrics=['accuracy'])
 
 print("training model...")
@@ -340,8 +338,7 @@ history = model.fit_generator(generator=batch_generator,
                               validation_data=validation_generator,
                               steps_per_epoch=len(train_image_labels) // batch_size,
                               validation_steps=len(valid_image_labels) // batch_size,
-                              epochs=maxepoches,
-                              callbacks=[reduce_lr],verbose=2)
+                              epochs=maxepoches)
 
 print("saving model...")
 model.save('model_0.h5')
