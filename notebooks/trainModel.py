@@ -234,7 +234,9 @@ def get_image_batch_generator(image_paths, labels, batch_size, output_shape, zmu
                       'rotation_before_resize': False,
                       'crop_after_rotation': True}
     batch_idx = 0
-    while (batch_idx*batch_size < len(image_paths)):
+    while (True):
+        if (batch_idx*batch_size >= len(image_paths)):
+            batch_idx = 0
         image_batch = []
         label_batch = []
         for i in range(batch_size):
@@ -262,7 +264,7 @@ for patient_id in train_ids:
     train_image_paths.append(image_dir+str(patient_id)+".jpeg")
     train_image_labels.append(image_to_label[str(patient_id)])
     
-batch_size = 32
+batch_size = 64
 maxepoches = 250
 learning_rate = 3e-4
 
