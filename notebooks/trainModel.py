@@ -7,9 +7,8 @@ import keras
 from keras import optimizers
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Flatten, LeakyReLU, Conv2D, MaxPooling2D, Dropout, Lambda
-import os
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"]="0, 2, 3"
+os.environ["CUDA_VISIBLE_DEVICES"]="2, 3"
 
 train_labels = p.read_csv(os.path.join('/mnt/lab_data2/amr1/diabetic_retinopathy/trainLabels.csv'))
 valid_ids = []
@@ -248,7 +247,10 @@ def get_image_batch_generator(image_paths, labels, batch_size, output_shape, zmu
                                                         zmuv_std=zmuv_std,
                                                         transfo_params=transfo_params)
                 image_batch.append(im)
-                label_batch.append(keras.utils.to_categorical(labels[batch_size*batch_idx + i], num_classes=5))
+                lbl = np.zeros((4))
+                for idx in range(labels[batch_size*batch_idx + i]):
+                    lbl[idx] = 1
+                label_batch.append(lbl)
         yield [np.array(image_batch), np.array(label_batch)]
         batch_idx += 1
         
@@ -266,7 +268,7 @@ for patient_id in train_ids:
     
 batch_size = 64
 maxepoches = 250
-learning_rate = 3e-4
+learning_rate = 5e-5
 
 batch_generator = get_image_batch_generator(image_paths=train_image_paths,
                                             labels=train_image_labels,
@@ -324,25 +326,26 @@ model = Sequential([
     Activation('relu'),
     Dropout(0.5),
     Dense(10),
-    Dense(5),
-    Activation('softmax'),
+    Dense(4),
+    Activation('sigmoid'),
 ])
 
 print("compiling model...")
 sgd = optimizers.Adam(lr=learning_rate)
-model.compile(loss='categorical_crossentropy', optimizer=sgd,metrics=['accuracy'])
+model.compile(loss='binary_crossentropy', optimizer=sgd,metrics=['accuracy'])
 
 print("training model...")
-def lr_scheduler(epoch):
-    return learning_rate * (0.5 ** (epoch // lr_drop))
-reduce_lr = keras.callbacks.LearningRateScheduler(lr_scheduler)
+early_stopping_callback = keras.callbacks.EarlyStopping(
+                            patience=25, restore_best_weights=True)
 history = model.fit_generator(generator=batch_generator,
                               validation_data=validation_generator,
                               steps_per_epoch=len(train_image_labels) // batch_size,
                               validation_steps=len(valid_image_labels) // batch_size,
-                              epochs=maxepoches)
+                              epochs=maxepoches,
+			      callbacks=[early_stopping_callback])
 
 print("saving model...")
-model.save('model_0.h5')
+model.set_weights(early_stopping_callback.best_weights)
+model.save('model_1.h5')
 
 print("done.")
