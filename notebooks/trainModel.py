@@ -268,7 +268,7 @@ for patient_id in train_ids:
     
 batch_size = 64
 maxepoches = 250
-learning_rate = 5e-5
+learning_rate = 3e-4
 
 batch_generator = get_image_batch_generator(image_paths=train_image_paths,
                                             labels=train_image_labels,
